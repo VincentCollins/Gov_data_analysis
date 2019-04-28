@@ -9,8 +9,7 @@ class my_spider():
     def __init__(self):
         pass
 
-    def html_process(self,html_text,database,tablename,maindata_type,line,end_year):
-        '''line从0开始'''
+    def html_process(self,html_text,database,tablename,maindata_type,line,end_year):#html文件处理函数，获取数据信息并建立数据表
         # 连接数据库
         self.my_sq = sqlite3.connect(database)
         self.cursor = self.my_sq.cursor()
@@ -21,8 +20,7 @@ class my_spider():
         # 获得的list中的成员就是bs4.element.Tag类型
         self.index_row = self.bs.select('table.public_table.table_main thead tr')  # 虽然只有一行，但仍然装在list里面
 
-        #print('b1')
-        # 写入数据库
+        # 建立数据库
         try:
             self.cursor.execute('''DROP TABLE if exists %s'''%tablename)
             self.cursor.execute('''CREATE TABLE %s
@@ -31,23 +29,23 @@ class my_spider():
                                         '''%(tablename,maindata_type))
         except:
             pass
-        #print('b2')
+
+        #写入数据
         for self.i, self.td in enumerate(self.rows[line].contents[1:]):  # 遍历第一行数据，跳过第一行第一个表头数据
-            #print('b')
             self.year = int(self.index_row[0].contents[self.i + 1].get_text()[0:4])  # 一个年份数据
             if self.year>end_year:#有必要的话，跳过前面的数据（如跳过2018年）
                 continue
-            if maindata_type=='int':
-                self.value = int(self.td.get_text())  # 一个整型数据
+            if maindata_type=='int':#关键数据是整数，比如人口
+                self.value = int(self.td.get_text())
                 self.cursor.execute('''INSERT INTO %s(YEAR, VALUE) VALUES('%d','%d')''' % (tablename,self.year, self.value))
-            else:
-                self.value = float(self.td.get_text())  # 一个浮点型数据
+            else:                   #关键数据是浮点型，比如GDP
+                self.value = float(self.td.get_text())
                 self.cursor.execute(
                     '''INSERT INTO %s(YEAR, VALUE) VALUES('%d','%f')''' % (tablename, self.year, self.value))
         self.my_sq.commit()
         self.my_sq.close()
 
-    def table_print(self,tablename):
+    def table_print(self,tablename):#打印数据表
         self.my_sq = sqlite3.connect('mydb.db')
         self.cursor = self.my_sq.cursor()
         self.items = self.cursor.execute("SELECT YEAR,VALUE from %s"%tablename)
@@ -56,7 +54,7 @@ class my_spider():
             print("YEAR: ",self.item[0],type(self.item[0]))
             print("VALUE: ",self.item[1],type(self.item[1]),'\n')
 
-    def task0(self,html_text):
+    def task0(self,html_text):#获得及处理农村消费情况信息
         self.html_process(html_text, 'mydb.db', 'OVERALL', 'float', 0, 2012)
         self.html_process(html_text, 'mydb.db', 'FOOD', 'float', 1, 2012)
         self.html_process(html_text, 'mydb.db', 'CLOTHING', 'float', 2, 2012)
@@ -64,18 +62,17 @@ class my_spider():
         self.html_process(html_text, 'mydb.db', 'TRANSPORTATION', 'float', 5, 2012)
         self.html_process(html_text, 'mydb.db', 'EDU_ENTERTAINMENT', 'float', 6, 2012)
 
-    def task1(self,html_text):#处理三个总人口数据
+    def task1(self,html_text):#获得及处理三个总人口数据
         self.html_process(html_text,'mydb.db','TOTALPOP','int',0,2018)
         self.html_process(html_text, 'mydb.db', 'MALEPOP', 'int', 1,2018)
         self.html_process(html_text, 'mydb.db', 'FEMALEPOP', 'int', 2,2018)
-        #self.table_print('TOTALPOP')
 
-    def task2(self,html_text):#处理年龄分布数据
+    def task2(self,html_text):#获得及处理年龄分布数据
         self.html_process(html_text, 'mydb.db', 'POP_0to14', 'int', 1,2017)
         self.html_process(html_text, 'mydb.db', 'POP_15to64', 'int', 2,2017)
         self.html_process(html_text, 'mydb.db', 'POP_65plus', 'int', 3,2017)
 
-    def task3(self,html_text):
+    def task3(self,html_text):#获得及处理GDP和三类产业数据
         self.html_process(html_text, 'mydb.db', 'GDP', 'float', 1, 2018)
         self.html_process(html_text, 'mydb.db', 'ASCEND_PI', 'float', 2, 2018)
         self.html_process(html_text, 'mydb.db', 'ASCEND_SI', 'float', 3, 2018)
@@ -83,7 +80,7 @@ class my_spider():
 
 
 
-    def spider_and_get_HTML(self,html_filename,branch1,branch2):
+    def spider_and_get_HTML(self,html_filename,branch1,branch2):#基于selenium模块，动态操作浏览器（执行鼠标点击操作等），并获得html文件
         if not os.path.exists('C:\\Users\Vincent Collins\\git_rep\\dataAnalysis\\%s'%html_filename):
             self.browser = webdriver.Chrome()  # 调用本地的Chrome浏览器
                                                #注意，这一行命令会打开浏览器！
@@ -105,7 +102,7 @@ class my_spider():
         self.myfile = open(html_filename,'r')
         return self.myfile.read()
 
-    def main_func(self):
+    def main_func(self):#总控函数
         self.html_text = self.spider_and_get_HTML('html0.txt', 11, 46)
         self.task0(self.html_text)
         self.html_text = self.spider_and_get_HTML('html1.txt',4,30)

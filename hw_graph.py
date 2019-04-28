@@ -5,18 +5,19 @@ import os
 import json
 class graphing():
     def __init__(self):
+        #存储数据库中数据的变量，每一个index代表一个数据表
         self.data = {'OVERALL':{},'FOOD':{},'CLOTHING':{},'ACCOMODATION':{},'TRANSPORTATION':{},'EDU_ENTERTAINMENT':{},
                      'TOTALPOP':{},'MALEPOP':{},'FEMALEPOP':{},
                      'POP_0to14':{},'POP_15to64':{},'POP_65plus':{},
                      'GDP':{},'ASCEND_PI':{},'ASCEND_SI':{},'ASCEND_TI':{}}
 
 
-    def spider_and_save(self):
+    def spider_and_save(self):#调用爬虫函数，建立数据库
         self.Spider = my_spider()
         self.Spider.main_func()#到此为止已经在数据库中存入所需数据
         pass
 
-    def load_database(self,database):
+    def load_database(self,database):#将数据库中数据录入变量中
         self.my_sq = sqlite3.connect(database)
         self.cursor = self.my_sq.cursor()
         for self.tag in self.data:
@@ -24,7 +25,7 @@ class graphing():
             for self.item in self.items:
                 self.data[self.tag][str(self.item[0])] = self.item[1]
 
-    def create_axis(self,tag):
+    def create_axis(self,tag):#基于前述的数据字典，将所有数据提取出来，生成numpy需要的array类型
         value = []
         year = []
         for i, item in enumerate(self.data[tag]):
@@ -47,24 +48,48 @@ class graphing():
         plt.show()
 
         # 各年龄段占比变化图
-        x, y1 = self.create_axis('FOOD')  # 长度跟其他三个不一样
+        x, y0 = self.create_axis('OVERALL')
+        x, y1 = self.create_axis('FOOD')  # 长度跟其他三个不一样！需要截取
         x, y2 = self.create_axis('CLOTHING')
         x, y3 = self.create_axis('ACCOMODATION')
         x, y4 = self.create_axis('TRANSPORTATION')
-        plt.plot(x, y1, label='Food')
-        plt.plot(x, y2, label='Clothing')
-        plt.plot(x, y3, label='Accomodation')
-        plt.plot(x, y4, label='Transportation')
+        plt.plot(x, y1/y0, label='Food')
+        plt.plot(x, y2/y0, label='Clothing')
+        plt.plot(x, y3/y0, label='Accomodation')
+        plt.plot(x, y4/y0, label='Transportation')
         plt.xticks(np.arange(1999, 2013, 1), rotation=60)
         plt.xlabel('Graph. Average cost in four main aspects in rural area vs Year', fontsize=14)
-        plt.ylabel('Cost/yuan',fontsize=12)
-        plt.legend(loc='upper left')
+        plt.ylabel('Percentege for several kinds of cost',fontsize=12)
+        plt.legend(loc='center left')
         plt.savefig('fig8.png', bbox_inches='tight')
         plt.show()
 
+    def graph1(self):
+        # 总人口条形图
+        x,y = self.create_axis('TOTALPOP')
+        plt.bar(x,y,align='edge',width=0.5,color='darkorange')
+        plt.xticks(np.arange(1999,2019,1),rotation=60)
+        plt.yticks(np.arange(0,160000,20000))
+        plt.xlabel('Graph. Total population vs Year',fontsize=14)
+        plt.ylabel('Total population/10^4')
+        plt.savefig('fig1.png',bbox_inches = 'tight')
+        plt.show()
+
+        #男女性总人口条形图
+        x, y1 = self.create_axis('MALEPOP')
+        x, y2 = self.create_axis('FEMALEPOP')
+        plt.plot(x, y1/(y1 + y2),label='MALE')
+        plt.plot(x, y2/(y1 + y2), label='FEMALE')
+        plt.xticks(np.arange(1999,2019,1),rotation=60)
+        plt.xlabel('Graph. Percentege of population of F&M vs Year', fontsize=14)
+        plt.ylabel('Percentege of population')
+        plt.legend(loc='center left')
+        plt.savefig('fig2.png', bbox_inches='tight')
+        plt.show()
 
 
     def graph2(self):
+        #提取出所需的几个16年数据
         num0 = self.data['TOTALPOP']['2016']
         num1 = self.data['POP_0to14']['2016']
         num2 = self.data['POP_15to64']['2016']
@@ -103,7 +128,7 @@ class graphing():
         plt.plot(x, y, label='GDP')
         plt.xticks(np.arange(1999, 2019, 1), rotation=60)
         plt.xlabel('Graph. GDP vs Year', fontsize=14)
-        plt.ylabel('GDP/10^8')
+        plt.ylabel('GDP/10^8yuan')
         plt.legend(loc='center left')
         plt.savefig('fig5.png', bbox_inches='tight')
         plt.show()
@@ -123,35 +148,13 @@ class graphing():
         plt.savefig('fig6.png', bbox_inches='tight')
         plt.show()
 
-    def graph1(self):
-        # 总人口条形图
-        x,y = self.create_axis('TOTALPOP')
-        plt.bar(x,y,align='edge',width=0.4,color='gold',edgecolor='mediumblue',lw=3)
-        plt.xticks(np.arange(1999,2019,1),rotation=60)
-        plt.yticks(np.arange(0,140000,5000))
-        plt.xlabel('Graph. Total population vs Year',fontsize=14)
-        plt.ylabel('Total population/10^4')
-        plt.savefig('fig1.png',bbox_inches = 'tight')
-        plt.show()
-
-        #男女性总人口条形图
-        x, y1 = self.create_axis('MALEPOP')
-        x, y2 = self.create_axis('FEMALEPOP')
-        plt.plot(x, y1,label='MALE')
-        plt.plot(x, y2, label='FEMALE')
-        plt.xticks(np.arange(1999,2019,1),rotation=60)
-        plt.xlabel('Graph. Total population of F&M vs Year', fontsize=14)
-        plt.ylabel('Total population/10^4')
-        plt.legend(loc='center left')
-        plt.savefig('fig2.png', bbox_inches='tight')
-        plt.show()
 
 
 
 
 if __name__ =="__main__":
     Graph = graphing()
-    if not os.path.exists('myjson.json'):
+    if not os.path.exists('myjson.json'):#测试阶段的函数，用json文件临时存储变量信息；避免每次都要运行爬虫
         Graph.spider_and_save()
         Graph.load_database('mydb.db')
         with open('myjson.json','w') as load_f:
@@ -163,8 +166,6 @@ if __name__ =="__main__":
             Graph.data = json.load(load_f)
         load_f.close()
 
-    # for item in Graph.data:
-    #     print(Graph.data[item])
     Graph.graph0()
     Graph.graph1()
     Graph.graph2()
